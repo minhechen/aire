@@ -1,0 +1,4 @@
+interface:
+  display_name: "aire Investigation"
+  short_description: "Trace iOS app features with local analysis and evidence"
+  default_prompt: "Use $aire-investigate to trace how a feature in my IPA is implemented and cite the saved evidence."

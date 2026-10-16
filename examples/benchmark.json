@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "fixture": "ios-demo",
+  "artifact": ".aire/demo/AireDemo.ipa",
+  "build": "python3 examples/build_ios_demo.py",
+  "evaluation_status": "not_run",
+  "ground_truth_basis": "Maintainer-reviewed fixture source; these are expected answers, not observed Agent results.",
+  "questions": [
+    {
+      "id": "favorites-entry",
+      "question": "点击收藏按钮后，数据是怎么保存的？",
+      "expected_facts": [
+        "The localized favorite.button button invokes DemoViewController favoriteTapped:.",
+        "favoriteTapped: calls FavoriteStore saveFavorite: with the title Offline reverse engineering.",
+        "FavoriteStore persists the collection in NSUserDefaults under aire.favorites.v1."
+      ],
+      "source_anchors": ["ios-demo/AppDelegate.m:favoriteTapped:", "ios-demo/FavoriteStore.m:saveFavorite:"],
+      "must_not_claim": ["A direct dispatch edge solely because two methods share a selector", "SQLite or a custom file store"],
+      "agent_result": null
+    },
+    {
+      "id": "favorites-restore",
+      "question": "收藏内容启动时从哪里恢复？如果没有收藏会怎么样？",
+      "expected_facts": [
+        "DemoViewController viewDidLoad calls loadFavorites when initializing its status label.",
+        "FavoriteStore loadFavorites uses NSUserDefaults arrayForKey: with aire.favorites.v1.",
+        "Missing stored data produces an empty array."
+      ],
+      "source_anchors": ["ios-demo/AppDelegate.m:viewDidLoad", "ios-demo/FavoriteStore.m:loadFavorites"],
+      "must_not_claim": ["A network request is needed to restore favorites"],
+      "agent_result": null
+    },
+    {
+      "id": "favorites-validation",
+      "question": "重复收藏和空标题分别怎么处理？",
+      "expected_facts": [
+        "An empty title returns before modifying the collection.",
+        "containsObject: checks for an existing title.",
+        "Only absent titles are appended and written back to defaults."
+      ],
+      "source_anchors": ["ios-demo/FavoriteStore.m:saveFavorite:"],
+      "must_not_claim": ["Duplicate favorites are always appended"],
+      "agent_result": null
+    },
+    {
+      "id": "login-request",
+      "question": "获取验证码按钮会向哪里发送什么请求？",
+      "expected_facts": [
+        "requestCodeTapped: calls LoginService requestCode:.",
+        "The URL is https://api.aire-demo.invalid/v1/auth/code and HTTP method is POST.",
+        "The Content-Type header is application/json.",
+        "The JSON body contains phone and purpose, with purpose set to login.",
+        "NSURLSession creates a data task and resume starts it."
+      ],
+      "source_anchors": ["ios-demo/AppDelegate.m:requestCodeTapped:", "ios-demo/LoginService.m:requestCode:"],
+      "must_not_claim": ["The reserved .invalid endpoint is a working service", "A request was executed during static analysis"],
+      "agent_result": null
+    },
+    {
+      "id": "selector-ambiguity",
+      "question": "所有 saveFavorite: 方法都会持久化收藏吗？预览按钮有什么区别？",
+      "expected_facts": [
+        "FavoriteStore and PreviewStore both declare saveFavorite:.",
+        "PreviewStore only copies the title into its _lastPreview instance variable and logs it.",
+        "previewTapped: uses the PreviewStore receiver.",
+        "The shared selector alone does not establish which receiver a dynamic call targets."
+      ],
+      "source_anchors": ["ios-demo/FavoriteStore.m:saveFavorite:", "ios-demo/PreviewStore.m:saveFavorite:", "ios-demo/AppDelegate.m:previewTapped:"],
+      "must_not_claim": ["PreviewStore saves to NSUserDefaults", "Every saveFavorite: call is definitely a FavoriteStore call"],
+      "agent_result": null
+    },
+    {
+      "id": "login-failure",
+      "question": "验证码请求失败时会重试或向用户展示错误吗？",
+      "expected_facts": [
+        "The completion block logs error.localizedDescription and returns on a transport error.",
+        "No retry or UI error presentation is implemented in this fixture.",
+        "The code does not check HTTP status or parse a success response payload."
+      ],
+      "source_anchors": ["ios-demo/LoginService.m:requestCode:"],
+      "must_not_claim": ["Automatic retry exists", "Any response proves login or verification succeeded"],
+      "agent_result": null
+    }
+  ]
+}
